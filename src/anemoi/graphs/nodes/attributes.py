@@ -94,34 +94,6 @@ class UniformWeights(BaseNodeAttribute):
         """
         return np.ones(nodes.num_nodes)
 
-
-def poly_area(vertices, radius=None):
-    # calculate the surface area of a planar or spherical polygon
-    # crude pure Python implementation for handling a single
-    # polygon at a time
-    # based on JPL Publication 07-3 by Chamberlain and Duquette (2007)
-
-    if radius is not None: # spherical polygons
-        if radius <= 0.0:
-            raise ValueError('radius must be > 0.0')
-        # wrap vertices so that last point is also first point
-        num_vertices = vertices.shape[0]
-        new_vertices = np.zeros((vertices.shape[0] + 1, 2))
-        new_vertices[:-1,...] = vertices
-        new_vertices[-1,...] = vertices[0,...]
-
-        lambda_vals = np.arctan2(new_vertices[...,1], new_vertices[...,0]) # longitudes
-        area_sum = 0
-        for i in range(0, num_vertices):
-            delta_lambda = (lambda_vals[i + 1] -
-                            lambda_vals[i - 1])
-            area_sum += delta_lambda 
-        area = (radius ** 2) * area_sum
-    else: # planar polygon
-        pass
-
-    return area
-
 class AreaWeights(BaseNodeAttribute):
     """Implements the area of the nodes as the weights.
 
@@ -175,7 +147,6 @@ class AreaWeights(BaseNodeAttribute):
             Attributes.
         """
         latitudes, longitudes = nodes.x[:, 0], nodes.x[:, 1]
-        # Convert degrees to radians
         if self.flat:
             points = np.stack([latitudes, longitudes], -1)
             v = Voronoi(points, qhull_options="QJ Pp")
@@ -185,6 +156,7 @@ class AreaWeights(BaseNodeAttribute):
                 areas.append(area) 
             result = np.asarray(areas)
         else:
+            points = latlon_rad_to_cartesian((np.asarray(latitudes), np.asarray(longitudes)))
             sv = SphericalVoronoi(points, self.radius, self.centre)
             mask = np.array([bool(i) for i in sv.regions])
             sv.regions = [region for region in sv.regions if region]
